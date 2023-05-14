@@ -8,6 +8,9 @@ const session = require("express-session");
 const passport = require("passport");
 const PORT = 3000;
 
+//ROUTES
+const userRouter = require("./routes/userRouter");
+
 const app = express();
 
 //INITIALIZE
@@ -28,17 +31,25 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+//ROUTES
+app.use("", userRouter);
+
+//Unhandled routes
+app.all("*", (req, res) => {
+  res.status(404).send("Sorry, the requested route was not found");
+});
+
 //CONNECTIONS
-/*mongoose.set('strictQuery', true);
+mongoose.set("strictQuery", true);
 const url = "mongodb://127.0.0.1:27017/eesaDB";
-const connect = mongoose.connect(url, {useNewUrlParser: true});
+const connect = mongoose.connect(url, { useNewUrlParser: true });
 connect
-.then(() => {
+  .then(() => {
     console.log("connected to db succesfully");
-})
-.catch((err) => {
+  })
+  .catch((err) => {
     console.log(err.message);
-});*/
+  });
 
 app.listen(PORT, () => {
   console.log(`server is running at http://localhost:${PORT}`);
