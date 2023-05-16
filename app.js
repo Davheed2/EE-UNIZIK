@@ -10,6 +10,9 @@ const PORT = 3000;
 
 //ROUTES
 const userRouter = require("./routes/userRouter");
+const postRouter = require("./routes/postRouter");
+const commentRouter = require("./routes/commentRouter");
+const fileUploadRouter = require("./routes/fileUploadRouter");
 
 const app = express();
 
@@ -33,6 +36,9 @@ app.use(passport.session());
 
 //ROUTES
 app.use("", userRouter);
+app.use("", postRouter);
+app.use("/posts", commentRouter);
+app.use("", fileUploadRouter);
 
 //Unhandled routes
 app.all("*", (req, res) => {
