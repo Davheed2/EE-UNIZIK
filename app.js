@@ -20,6 +20,8 @@ const app = express();
 app.use(logger("dev"));
 app.use(express.json());
 
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(express.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -48,7 +50,10 @@ app.all("*", (req, res) => {
 //CONNECTIONS
 mongoose.set("strictQuery", true);
 const url = "mongodb://127.0.0.1:27017/eesaDB";
-const connect = mongoose.connect(url, { useNewUrlParser: true });
+const connect = mongoose.connect(url, {
+  useNewUrlParser: true,
+  autoIndex: false,
+});
 connect
   .then(() => {
     console.log("connected to db succesfully");
