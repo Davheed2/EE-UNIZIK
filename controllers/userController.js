@@ -50,8 +50,7 @@ exports.login = (req, res, next) => {
 exports.logout = (req, res) => {
   req.logOut((err) => {
     if (err) {
-      res.statusCode = 500;
-      res.json({ err: err });
+      res.status(500).json({ err: err });
     } else {
       res.statusCode = 200;
       res.setHeader("Content-Type", "application/json");

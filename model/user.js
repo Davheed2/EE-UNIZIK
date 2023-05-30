@@ -1,9 +1,10 @@
-const {mongoose, Schema} = require("mongoose");
+const { mongoose, Schema } = require("mongoose");
 const passport = require("passport");
 const passportLocalMongoose = require("passport-local-mongoose");
 //const findOrCreate = require("mongoose-findorcreate");
 
-const userSchema = new Schema({
+const userSchema = new Schema(
+  {
     firstName: {
       type: String,
     },
@@ -15,6 +16,10 @@ const userSchema = new Schema({
     },
     level: {
       type: String,
+    },
+    gradePoints: {
+      type: Schema.Types.ObjectId,
+      ref: "GradePoint",
     },
     role: {
       type: String,
@@ -28,8 +33,8 @@ const userSchema = new Schema({
   },
   {
     timestamps: true,
-});
-
+  }
+);
 
 userSchema.plugin(passportLocalMongoose);
 //userSchema.plugin(findOrCreate);
@@ -49,6 +54,5 @@ passport.deserializeUser(async (id, done) => {
     done(err);
   }
 });
-
 
 module.exports = User;

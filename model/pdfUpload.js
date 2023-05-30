@@ -1,19 +1,18 @@
 const { Schema, mongoose } = require("mongoose");
 
-const pdfSchema = new Schema({
-    admin: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
+const pdfSchema = new Schema(
+  {
+    fileName: {
+      type: String
     },
-    avatar: {
-        type: String
-    },
-    cloudinaryId: {
-        type: String
+    url: {
+      type: String
     }
-},{
-    timestamps: true
-});
+  },
+  {
+    timestamps: true,
+  }
+);
 
 const Pdf = mongoose.model("Pdf", pdfSchema);
 

@@ -1,5 +1,5 @@
 const Post = require("../model/post");
-//const Comment = require("../model/comment");
+const Comment = require("../model/comment");
 
 ////////////////////////////////POST SECTIONS////////////////////////////////
 //GET ALL POSTS WITH ITS COMMENTS

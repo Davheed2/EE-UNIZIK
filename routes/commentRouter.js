@@ -32,12 +32,7 @@ commentRouter.post(
   isAuthenticated,
   commentController.postComment
 );
-commentRouter.patch(
-  "/:postId/comments",
-  isAuthenticated,
-  isAdmin,
-  commentController.patchAllComment
-);
+
 commentRouter.delete(
   "/:postId/comments",
   isAuthenticated,
@@ -66,15 +61,14 @@ commentRouter.post(
   isAuthenticated,
   commentController.postReply
 );
-commentRouter.post(
-  "/:postId/comments/:commentId/replies/:replyId",
-  isAuthenticated,
-  commentController.postSubReply
-);
+// commentRouter.post(
+//   "/:postId/comments/:commentId/replies/:replyId",
+//   isAuthenticated,
+//   commentController.postSubReply
+// );
 commentRouter.patch(
   "/:postId/comments/:commentId/replies",
   isAuthenticated,
-  isAdmin,
   commentController.patchSpecificReply
 );
 commentRouter.delete(
@@ -86,7 +80,6 @@ commentRouter.delete(
 commentRouter.delete(
   "/:postId/comments/:commentId/replies/:replyId",
   isAuthenticated,
-  isAdmin,
   commentController.deleteReply
 );
 

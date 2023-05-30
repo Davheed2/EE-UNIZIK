@@ -13,6 +13,7 @@ const userRouter = require("./routes/userRouter");
 const postRouter = require("./routes/postRouter");
 const commentRouter = require("./routes/commentRouter");
 const fileUploadRouter = require("./routes/fileUploadRouter");
+const gradePointRouter = require("./routes/gradePointRouter");
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use("", userRouter);
 app.use("", postRouter);
 app.use("/posts", commentRouter);
 app.use("", fileUploadRouter);
+app.use("", gradePointRouter);
 
 //Unhandled routes
 app.all("*", (req, res) => {

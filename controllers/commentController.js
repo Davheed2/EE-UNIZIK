@@ -204,13 +204,11 @@ exports.postReply = async (req, res) => {
 
     // Add the reply to the parent comment's replies array and save the reply
     parentComment.replies.push(reply);
-    //parentComment.replies.push(reply._id);
     await parentComment.save();
 
     // Add the reply to the Post's comments array
     const post = await Post.findById(req.params.postId);
     post.comments.push(reply);
-    //post.comments.push(reply._id);
     await post.save();
 
     res.status(201).json({ message: "Reply posted successfully", reply });
