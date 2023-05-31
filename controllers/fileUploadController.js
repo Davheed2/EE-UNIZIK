@@ -1,166 +1,114 @@
 const Pdf = require("../model/pdfUpload");
-const serviceAccount = require("../serviceAccount.json");
-const admin = require("firebase-admin");
-
-//const path = require("path");
-//create a new firebase project
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: process.env.STORAGE_BUCKET
-});
-
+const { S3Client, ListObjectsCommand, DeleteObjectsCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+//MAKING 5 ACCOUNTS FOR EACH DEPARTMENT
 
 exports.postPdf = async (req, res) => {
   try {
-    const bucket = admin.storage().bucket();
-
-    const file = req.file;
-
-    if (!file) {
-      return res.status(400).json({ error: "No file provided" });
-    }
-
-    const blob = bucket.file(file.originalname);
-
-    const blobStream = blob.createWriteStream();
-
-    blobStream.on("error", (err) => {
-      return res.status(500).json({ error: err.message });
+    //console.log(req.file);
+    await Pdf.create({
+      filename: req.file.key,
+      originalname: req.file.originalname,
+      url: req.file.location,
+      //admin: req.user._id
     });
 
-    blobStream.on("finish", async () => {
-      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-
-      const newPdf = await Pdf.create({
-        filename: file.originalname,
-        url: publicUrl
-      });
-
-      await newPdf.save();
-      return res.status(200).send("File uploaded successfully");
-      //res.status(200).json({url: publicUrl});
-    });
-
-    blobStream.end(file.buffer);
+    return res.status(201).json({ message: "File uploaded successfully" });
   } catch (error) {
     console.error(error);
-    return res.status(500).send("An error occurred while uploading the file");
+    res.status(500).json({ message: error.message });
   }
 };
 
 exports.getAllPdf = async (req, res) => {
   try {
-    const files = await Pdf.find();
-    //.sort({createdAt: -1});
+    // Retrieve all files from MongoDB
+    const files = await Pdf.find().sort({ createdAt: -1 });
 
+    if (!files) {
+      return res.status(404).json({message: "No Pdf found"})
+    }
     res.status(200).json(files);
   } catch (error) {
     console.error(error);
-    res.status(500).send("An error occurred while retrieving file");
+    res.status(500).json({ message: error.message });
   }
 };
 
 exports.deleteAllPdf = async (req, res) => {
   try {
-    // Find all files in MongoDB
+    // Retrieve all files from MongoDB
     const files = await Pdf.find();
-
     if (files.length === 0) {
-      return res.status(404).json({ error: "No files found" });
+      return res.status(404).json({ message: "No files found" });
     }
 
-    // Delete files from Google Cloud Storage
-    const bucket = admin.storage().bucket();
-    const deletePromises = files.map((file) => bucket.file(file.fileName).delete());
-    await Promise.all(deletePromises);
+    // Collect all S3 object keys to delete
+    const objectKeys = files.map((file) => ({ Key: file.key }));
+
+    // Delete files from AWS S3
+    await S3Client.send(
+      new DeleteObjectsCommand({
+        Bucket: process.env.BUCKET,
+        Delete: { Objects: objectKeys }
+      })
+    );
 
     // Delete files from MongoDB
-    await Pdf.deleteMany();
+    await Pdfrs.deleteMany({});
 
-    res.status(200).json({ message: "All pdf files deleted successfully" });
+    return res.json({ message: "All files deleted successfully" });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ error: "An error occurred while deleting the files" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
+
 };
 
 exports.getPdf = async (req, res) => {
-  const { pdfId } = req.params;
+  const fileId = req.params.pdfId;
 
   try {
-    // Find the file by ID in MongoDB
-    const pdf = await Pdf.findById(pdfId);
+    // Find the file in MongoDB by ID
+    const file = await Pdf.findById(fileId);
 
-    if (!pdf) {
-      return res.status(404).json({ error: "File not found" });
+    if (!file) {
+      res.status(404).send("File not found.");
     }
 
-    res.status(200).json(pdf);
+    return res.status(200).json(file);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "An error occurred while finding the file" });
+    res.status(500).json({ err: error.message });
   }
 };
 
 exports.deletePdf = async (req, res) => {
-  const { pdfId } = req.params;
+  const fileId = req.params.pdfId;
 
   try {
-    // Find the file by ID in MongoDB
-    const pdf = await Pdf.findById(pdfId);
-
-    if (!pdf) {
-      return res.status(404).json({ error: "File not found" });
+    // Find the file in MongoDB
+    const file = await Pdf.findById(fileId);
+    if (!file) {
+      return res.status(404).json({ message: "File not found" });
     }
 
-    // Delete the file from Google Cloud Storage
-    const bucket = admin.storage().bucket();
-    await bucket.file(pdf.fileName).delete();
+    // Delete the file from AWS S3
+    await S3Client.send(
+      new DeleteObjectCommand({
+        Bucket: process.env.BUCKET,
+        Key: file.key
+      })
+    );
 
     // Delete the file from MongoDB
-    await Pdf.findByIdAndDelete(pdfId);
+    await file.deleteOne();
 
-    res.status(200).json({ message: "File deleted successfully" });
+    return res.json({ message: "File deleted successfully" });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ error: "An error occurred while deleting the file" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
-};
 
-exports.updatePdf = async (req, res) => {
-  const { pdfId } = req.params;
-  const { fileName, url } = req.body;
-
-  try {
-    // Find the file by ID in MongoDB
-    const pdf = await Pdf.findById(pdfId);
-
-    if (!pdf) {
-      return res.status(404).json({ error: "File not found" });
-    }
-
-    // Update the file in Google Cloud Storage
-    const bucket = admin.storage().bucket();
-    const file = bucket.file(pdf.fileName);
-    await file.move(fileName);
-
-    // Update the file in MongoDB
-    pdf.fileName = fileName;
-    pdf.url = url;
-    await pdf.save();
-
-    res.status(200).json({ message: "File updated successfully" });
-  } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ error: "An error occurred while updating the file" });
-  }
 };
 
 
@@ -175,79 +123,31 @@ exports.updatePdf = async (req, res) => {
 
 
 
+// const bucketName = process.env.BUCKET;
+// const newFileNameKey = "file.pdf";
+// const filePath = `${__dirname}/Data Structures.pdf`;
 
+// function uploadFile(filePath, bucketName, newFileNameKey) {
+//   const fileStream = fs.createReadStream(filePath);
+//   fileStream.on("error", (err) => {
+//     console.log("File Error:", err);
+//   })
 
+//   const params = {
+//     Bucket: bucketName,
+//     Key: newFileNameKey,
+//     Body: fileStream,
+//     ACL: "public-read"
+//   };
 
-
-// const { Storage } = require("@google-cloud/storage");
-
-
-
-// exports.postPdf = async (req, res) => {
-//   try {
-//     //console.log(req.file);
-//     //create instance of pdf object
-//     // const newPdf = await Pdf.create({
-//     //   //admin: req.user.id,
-//     //   avatar: req.file.path,
-//     //   cloudinaryId: req.file.filename,
-//     // });
-//     const uploadedMedia = await uploadMedia(req.file, "test");
-
-//     console.log(uploadedMedia);
-//     //save new pdf object
-//     return res.json(newPdf);
-//   } catch (err) {
-//     console.log(err);
-//   }
-// };
-
-// exports.getAllPdf = async (req, res) => {
-//   try {
-//     const pdf = await Pdf.find();
-//     return res.json(pdf);
-//   } catch (error) {
-//     console.log(error);
-//   }
-// };
-
-// exports.postPdf = async (req, res) => {
-//   try {
-//     console.log(req.file);
-//     //create instance of pdf object
-//     const newPdf = await Pdf.create({
-//       //admin: req.user.id,
-//       avatar: req.file.path,
-//       cloudinaryId: req.file.filename,
-//     });
-
-//     //save new pdf object
-//     return res.json(newPdf);
-//   } catch (err) {
-//     console.log(err);
-//   }
-// };
-
-// exports.updatePdf = async (req, res) => {
-//   try {
-//     let pdf = await Pdf.findById(req.params.pdfId);
-
-//     if (!pdf) {
-//       return res.json({ message: "No PDF found" });
+//   s3.upload(params, (err, data) => {
+//     if (err) {
+//       console.log("Error:", err);
 //     }
+//     if (data) {
+//       console.log("Success:", data.Location);
+//     }
+//   })
+// }
 
-//     const data = await Pdf.findByIdAndUpdate(
-//       req.params.pdfId,
-//       {
-//         //admin: req.user._id || pdf.admin,
-//         avatar: req.file.path,
-//         cloudinaryId: req.file.filename,
-//       },
-//       { new: true }
-//     );
-
-//     return res.json(data);
-//   } catch (error) {
-//     console.log(error);
-//   }
-// };
+// uploadFile(filePath, bucketName, newFileNameKey);

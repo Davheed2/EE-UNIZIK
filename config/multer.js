@@ -1,11 +1,19 @@
 const multer = require("multer");
-const {Storage} = require("@google-cloud/storage");
+const multerS3 = require("multer-s3");
+const client = require("./awsconfig");
 
-const storage = new Storage();
-
-//const storage = multer.memoryStorage();
 const upload = multer({
-  storage: storage
+  storage: multerS3({
+    s3: client,
+    bucket: process.env.BUCKET,
+    acl: "public-read",
+    metadata: (req, file, cb) => {
+      cb(null, {fieldName: file.fieldname})
+    },
+    key: (req, file, cb) =>{
+      cb(null, `${Date.now()}-${file.originalname}`);
+    }
+  })
 });
 
 

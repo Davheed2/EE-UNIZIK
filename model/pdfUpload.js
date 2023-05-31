@@ -2,12 +2,19 @@ const { Schema, mongoose } = require("mongoose");
 
 const pdfSchema = new Schema(
   {
-    fileName: {
+    filename: {
+      type: String
+    },
+    originalname: {
       type: String
     },
     url: {
       type: String
-    }
+    },
+    admin: {
+      type: Schema.Types.ObjectId,
+      ref: "User"
+    },
   },
   {
     timestamps: true,
