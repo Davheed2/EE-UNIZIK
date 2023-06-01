@@ -6,6 +6,8 @@ exports.register = (req, res) => {
   const password = req.body.password;
   const user = req.body;
 
+  ///check if he uses small and capital letters
+
   //Register a new user using the local strategy
   //Passportjs requires 3 objects, the first and second are the user details while the third is the callback function
   //in the frontend validate their usename by changing the username to lower case before passing them to the database

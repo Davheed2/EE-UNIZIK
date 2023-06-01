@@ -23,10 +23,10 @@ const isAdmin = (req, res, next) => {
 };
 
 fileUploadRouter.get("/upload", fileUploadController.getAllPdf);
-fileUploadRouter.post("/upload", upload.single("file"), fileUploadController.postPdf);
-fileUploadRouter.delete("/upload", fileUploadController.deleteAllPdf);
+fileUploadRouter.post("/upload", isAuthenticated, isAdmin, upload.single("file"), fileUploadController.postPdf);
+fileUploadRouter.delete("/upload", isAuthenticated, isAdmin, fileUploadController.deleteAllPdf);
 
 fileUploadRouter.get("/upload/:pdfId", fileUploadController.getPdf);
-fileUploadRouter.delete("/upload/:pdfId", fileUploadController.deletePdf);
+fileUploadRouter.delete("/upload/:pdfId", isAuthenticated, isAdmin, fileUploadController.deletePdf);
 
 module.exports = fileUploadRouter;

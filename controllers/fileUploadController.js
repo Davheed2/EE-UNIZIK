@@ -2,8 +2,6 @@ const Pdf = require("../model/pdfUpload");
 const { S3Client, ListObjectsCommand, DeleteObjectsCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const client = require("../config/awsconfig");
 
-//console.log(S3Client);
-
 //MAKING 5 ACCOUNTS FOR EACH DEPARTMENT
 
 exports.postPdf = async (req, res) => {
@@ -13,7 +11,7 @@ exports.postPdf = async (req, res) => {
       filename: req.file.key,
       originalname: req.file.originalname,
       url: req.file.location,
-      //admin: req.user._id
+      admin: req.user._id
     });
 
     return res.status(201).json({ message: "File uploaded successfully" });
