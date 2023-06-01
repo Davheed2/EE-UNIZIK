@@ -1,5 +1,9 @@
 const Pdf = require("../model/pdfUpload");
 const { S3Client, ListObjectsCommand, DeleteObjectsCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const client = require("../config/awsconfig");
+
+//console.log(S3Client);
+
 //MAKING 5 ACCOUNTS FOR EACH DEPARTMENT
 
 exports.postPdf = async (req, res) => {
@@ -38,15 +42,16 @@ exports.deleteAllPdf = async (req, res) => {
   try {
     // Retrieve all files from MongoDB
     const files = await Pdf.find();
+  
     if (files.length === 0) {
       return res.status(404).json({ message: "No files found" });
     }
 
     // Collect all S3 object keys to delete
-    const objectKeys = files.map((file) => ({ Key: file.key }));
+    const objectKeys = files.map((file) => ({ Key: file.filename }));
 
     // Delete files from AWS S3
-    await S3Client.send(
+    await client.send(
       new DeleteObjectsCommand({
         Bucket: process.env.BUCKET,
         Delete: { Objects: objectKeys }
@@ -54,7 +59,7 @@ exports.deleteAllPdf = async (req, res) => {
     );
 
     // Delete files from MongoDB
-    await Pdfrs.deleteMany({});
+    await Pdf.deleteMany();
 
     return res.json({ message: "All files deleted successfully" });
   } catch (error) {
@@ -70,6 +75,7 @@ exports.getPdf = async (req, res) => {
   try {
     // Find the file in MongoDB by ID
     const file = await Pdf.findById(fileId);
+
 
     if (!file) {
       res.status(404).send("File not found.");
@@ -93,15 +99,15 @@ exports.deletePdf = async (req, res) => {
     }
 
     // Delete the file from AWS S3
-    await S3Client.send(
+    await client.send(
       new DeleteObjectCommand({
         Bucket: process.env.BUCKET,
-        Key: file.key
+        Key: file.filename
       })
     );
 
     // Delete the file from MongoDB
-    await file.deleteOne();
+    await Pdf.deleteOne(file);
 
     return res.json({ message: "File deleted successfully" });
   } catch (error) {

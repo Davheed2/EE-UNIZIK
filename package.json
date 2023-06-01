@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "@aws-sdk/client-s3": "^3.342.0",
-    "aws-sdk": "^2.1387.0",
+    "aws-sdk": "^2.1388.0",
     "body-parser": "^1.20.2",
     "cloudinary": "^1.36.4",
     "dotenv": "^16.0.3",
