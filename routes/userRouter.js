@@ -32,8 +32,14 @@ const isSuperUser = (req, res, next) => {
 
 //USER AUTHENTICATION
 userRouter.get("/users/logout", Controller.logout);
-//userRouter.get("/auth/google", Controller.googleLogin);
-//userRouter.get("/auth/google/callback", Controller.googleLoginHome);
+userRouter.get("/", Controller.home);
+
+userRouter.get("/auth/google", Controller.googleLogin);
+userRouter.get("/auth/google/callback", Controller.googleLoginHome);
+//userRouter.get("/auth/protected", isAuthenticated, Controller.googleLoginSuccess);
+//userRouter.get("/login", isAuthenticated, Controller.googleLoginFailure);
+
+
 userRouter.post("/users/register", Controller.register);
 userRouter.post("/users/login", Controller.login);
 

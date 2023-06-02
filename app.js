@@ -6,7 +6,10 @@ const mongoose = require("mongoose");
 const logger = require("morgan");
 const session = require("express-session");
 const passport = require("passport");
+require("./auth");
 const PORT = 3000;
+
+//save secret in env file
 
 //ROUTES
 const userRouter = require("./routes/userRouter");
@@ -22,17 +25,16 @@ const app = express();
 app.use(logger("dev"));
 app.use(express.json());
 
-app.use(bodyParser.json({ limit: "50mb" }));
-app.use(express.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "client")));
 app.use(
   session({
     name: "session-id",
     secret: "Thisisourlittlesecret",
     resave: false,
     saveUninitialized: false,
+    //cookie: {secure: false}
   })
 );
 app.use(passport.initialize());

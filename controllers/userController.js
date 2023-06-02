@@ -61,17 +61,35 @@ exports.logout = (req, res) => {
   });
 };
 
+exports.home = (req, res) => {
+  res.sendFile("/index.html");
+}
 exports.googleLogin = (req, res) => {
   passport.authenticate("google", { scope: ["profile"] });
 };
 
 exports.googleLoginHome = (req, res) => {
-  passport.authenticate("google", { failureRedirect: "/login" }),
-    function (req, res) {
-      //Successful authentication, redirect home.
-      res.send("google auth");
-    };
+  passport.authenticate("google", {
+    successRedirect: "/auth/protected",
+    failureRedirect: "/login",
+  })
+    // function (req, res) {
+    //   //Successful authentication, redirect home.
+    //   res.send("google auth");
+    // };
 };
+
+exports.googleLoginSuccess = (req, res) => {
+  let name = req.user.displayName;
+  res.send(`Hello ${name}`);
+}
+
+exports.googleLoginFailure = (req, res) => {
+  res.send("something went wrong!");
+}
+
+
+
 
 exports.getUsers = async (req, res) => {
   try {
