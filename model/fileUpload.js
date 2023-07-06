@@ -11,6 +11,18 @@ const pdfSchema = new Schema(
     url: {
       type: String
     },
+    level: {
+      type: Number
+    },
+    semester: {
+      type: String
+    },
+    topic: {
+      type: String
+    },
+    thumbnailUrl: {
+      type: String
+    },
     admin: {
       type: Schema.Types.ObjectId,
       ref: "User"

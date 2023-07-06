@@ -22,8 +22,20 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+const checkActiveStatus = async (req, res, next) => {
+  const { user } = req;
+
+  // Check if the user is not active
+  if (user && !user.isActive) {
+    return res.status(403).json({ error: "User deactivated. Contact admin for more support" });
+  }
+
+  // If the user is active, proceed to the next middleware
+  next();
+};
+
 fileUploadRouter.get("/upload", fileUploadController.getAllPdf);
-fileUploadRouter.post("/upload", isAuthenticated, isAdmin, upload.single("file"), fileUploadController.postPdf);
+fileUploadRouter.post("/upload", upload.single("file"), fileUploadController.postPdf);
 fileUploadRouter.delete("/upload", isAuthenticated, isAdmin, fileUploadController.deleteAllPdf);
 
 fileUploadRouter.get("/upload/:pdfId", fileUploadController.getPdf);

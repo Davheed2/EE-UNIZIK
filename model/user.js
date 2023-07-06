@@ -9,6 +9,12 @@ const userSchema = new Schema(
     firstName: {
       type: String,
     },
+    lastName: {
+      type: String,
+    },
+    avatar: {
+      type: String,
+    },
     googleId: {
       type: String,
     },
@@ -18,9 +24,16 @@ const userSchema = new Schema(
     level: {
       type: String,
     },
+    cloudinaryId: {
+      type: "string",
+    },
     gradePoints: {
       type: Schema.Types.ObjectId,
       ref: "GradePoint",
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     role: {
       type: String,
@@ -42,6 +55,7 @@ userSchema.plugin(findOrCreate);
 
 const User = mongoose.model("User", userSchema);
 
+module.exports = User;
 // passport.use(
 //   new GoogleStrategy(
 //     {
@@ -71,5 +85,3 @@ const User = mongoose.model("User", userSchema);
 //     done(err);
 //   }
 // });
-
-module.exports = User;

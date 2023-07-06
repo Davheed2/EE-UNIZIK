@@ -8,24 +8,23 @@ const postSchema = new Schema(
     },
     photo: {
       type: String,
-      required: true
     },
     description: {
       type: String,
       required: true,
     },
-    // type:{
-    //     type: String,
-    //     required: true
-    // },
-    // slug:{
-    //     type: String,
-    //     required: true
-    // },
-    // excerpt:{
-    //     type: String,
-    //     required: true
-    // },
+    type: {
+      type: String,
+      required: true,
+    },
+    slug: {
+      type: String,
+      required: true,
+    },
+    excerpt: {
+      type: String,
+      required: true,
+    },
     admin: {
       type: Schema.Types.ObjectId,
       ref: "User",

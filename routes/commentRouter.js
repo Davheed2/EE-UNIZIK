@@ -21,6 +21,18 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+const checkActiveStatus = async (req, res, next) => {
+  const { user } = req;
+
+  // Check if the user is not active
+  if (user && !user.isActive) {
+    return res.status(403).json({ error: "User deactivated. Contact admin for more support" });
+  }
+
+  // If the user is active, proceed to the next middleware
+  next();
+};
+
 //COMMENTS ROUTES
 commentRouter.get(
   "/:postId/comments",

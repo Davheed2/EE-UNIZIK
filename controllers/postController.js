@@ -23,10 +23,11 @@ exports.createPost = async (req, res) => {
     const post = new Post({
       title: req.body.title,
       description: req.body.description,
-      //   excerpt: req.body.excerpt,
-      //   slug: req.body.slug,
-      //   photo: req.body.photo,
-      admin: req.user._id,
+      excerpt: req.body.excerpt,
+      slug: req.body.slug,
+      photo: req.body.photo,
+      type: req.body.type,
+      admin: req.user._id
     });
 
     //await and save the new post
@@ -63,8 +64,8 @@ exports.getSpecificPost = async (req, res) => {
   const { postId } = req.params;
   try {
     //Find the specific post with the given ID from the params then populate the comment and the owner fields
-    //const post = await Post.find({slug:postId})
-    const post = await Post.findById(postId)
+    const post = await Post.find({slug:postId})
+    //const post = await Post.findById(postId)
       .populate({
         path: "comments",
         populate: { path: "owner", select: "firstName" },
