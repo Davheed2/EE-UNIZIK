@@ -58,7 +58,7 @@ userRouter.post("/users/login", checkActiveStatus, Controller.login);
 
 
 //USER DETAILS
-userRouter.get("/users", isAuthenticated, isAdmin, Controller.getUsers);
+userRouter.get("/users", Controller.getUsers);
 userRouter.get("/users/:id", isAuthenticated, isAdmin, Controller.getUser);
 userRouter.put("/users/:id", isAuthenticated, Controller.editUser);
 userRouter.delete("/users", isAuthenticated, isAdmin, Controller.deleteUsers);

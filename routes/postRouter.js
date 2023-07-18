@@ -31,7 +31,7 @@ const checkActiveStatus = async (req, res, next) => {
 };
 
 //POST ROUTES
-postRouter.get("/posts", isAuthenticated, postController.getPost);
+postRouter.get("/posts", postController.getPost);
 postRouter.post("/posts", isAuthenticated, isAdmin, postController.createPost);
 postRouter.put("/posts", isAuthenticated, isAdmin, postController.putPost);
 postRouter.delete(
