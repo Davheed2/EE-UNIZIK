@@ -31,7 +31,7 @@ app.use(express.static(path.join(__dirname, "client")));
 app.use(
   session({
     name: "session-id",
-    secret: "Thisisourlittlesecret",
+    secret: process.env.SECRET,
     resave: false,
     saveUninitialized: false,
     //cookie: {secure: false}
@@ -55,7 +55,8 @@ app.all("*", (req, res) => {
 
 //CONNECTIONS
 mongoose.set("strictQuery", true);
-const url = "mongodb://127.0.0.1:27017/eesaDB";
+//const url = "mongodb://127.0.0.1:27017/eesaDB";
+const url = process.env.MONGO_CONNECT_URI
 const connect = mongoose.connect(url, { useNewUrlParser: true, autoIndex: false,});
 connect
   .then(() => {

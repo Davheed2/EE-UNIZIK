@@ -199,32 +199,3 @@ exports.deletePdf = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
-// const bucketName = process.env.BUCKET;
-// const newFileNameKey = "file.pdf";
-// const filePath = `${__dirname}/Data Structures.pdf`;
-
-// function uploadFile(filePath, bucketName, newFileNameKey) {
-//   const fileStream = fs.createReadStream(filePath);
-//   fileStream.on("error", (err) => {
-//     console.log("File Error:", err);
-//   })
-
-//   const params = {
-//     Bucket: bucketName,
-//     Key: newFileNameKey,
-//     Body: fileStream,
-//     ACL: "public-read"
-//   };
-
-//   s3.upload(params, (err, data) => {
-//     if (err) {
-//       console.log("Error:", err);
-//     }
-//     if (data) {
-//       console.log("Success:", data.Location);
-//     }
-//   })
-// }
-
-// uploadFile(filePath, bucketName, newFileNameKey);
