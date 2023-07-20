@@ -5,6 +5,8 @@ const client = require("../config/awsconfig");
 const fs = require("fs");
 const gm = require("gm");
 const { DownloaderHelper } = require("node-downloader-helper");
+const NodeCache = require("node-cache");
+const cache = new NodeCache({ stdTTL: 60 * 5 });
 const {
   DeleteObjectsCommand,
   DeleteObjectCommand,
@@ -69,7 +71,7 @@ exports.postPdf = async (req, res) => {
         level: req.body.level,
         semester: req.body.semester,
         topic: req.body.topic,
-        admin: req.user._id
+        admin: req.user._id,
       });
 
       await generateThumbnail(
@@ -111,13 +113,27 @@ exports.postPdf = async (req, res) => {
 
 exports.getAllPdf = async (req, res) => {
   try {
-    // Retrieve all files from MongoDB
+    // Check if the data is already cached
+    const cacheKey = "pdfLists";
+    const isCached = cache.has(cacheKey);
+    console.log(isCached);
+
+    if (isCached) {
+      const cachedData = cache.get(cacheKey);
+      return res.status(200).json(cachedData);
+    }
+
+    // If cached data is not available, retrieve all files from MongoDB
     const files = await Pdf.find().sort({ createdAt: -1 });
 
     if (!files) {
       return res.status(404).json({ message: "No Pdf found" });
     }
-    res.status(200).json(files);
+
+    // Cache the fetched data for future requests
+    cache.set(cacheKey, files);
+    console.log(isCached);
+    return res.status(200).json(files);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
@@ -158,6 +174,16 @@ exports.getPdf = async (req, res) => {
   const fileId = req.params.pdfId;
 
   try {
+    // Check if the data is already cached
+    const cacheKey = "pdfList";
+    const isCached = cache.has(cacheKey);
+    console.log(isCached);
+
+    if (isCached) {
+      const cachedData = cache.get(cacheKey);
+      return res.status(200).json(cachedData);
+    }
+
     // Find the file by its id
     const file = await Pdf.findById(fileId);
 
@@ -165,6 +191,7 @@ exports.getPdf = async (req, res) => {
       res.status(404).send("File not found.");
     }
 
+    cache.set(cacheKey, file);
     return res.status(200).json(file);
   } catch (error) {
     console.error(error);
