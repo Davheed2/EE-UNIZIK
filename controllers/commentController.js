@@ -154,16 +154,6 @@ exports.deleteAcomment = async (req, res) => {
 //GET ALL REPLIES UNDER A COMMENT UNDER A POST
 exports.getAllReplies = async (req, res) => {  
   try {
-    // Check if the data is already cached
-    const cacheKey = "repliess";
-    const isCached = cache.has(cacheKey);
-    console.log(isCached);
-
-    if (isCached) {
-      const cachedData = cache.get(cacheKey);
-      return res.status(200).json(cachedData);
-    }
-
     const { postId, commentId } = req.params;
     //Get all the replies under a specified comment by its ID and populate the owner field
     const comment = await Comment.findById(commentId).populate({
@@ -175,7 +165,6 @@ exports.getAllReplies = async (req, res) => {
     });
 
     const replies = comment.replies.filter(reply => reply.postId.toString() === postId.toString());
-    cache.set(cacheKey, replies);
     return res.json({replies});
   } catch (error) {
     console.error(error);
@@ -186,17 +175,7 @@ exports.getAllReplies = async (req, res) => {
 //GET A REPLY UNDER A COMMENT UNDER A POST
 exports.getReply = async (req, res) => {
   try {
-    // Check if the data is already cached
-    const cacheKey = "replies";
-    const isCached = cache.has(cacheKey);
-    console.log(isCached);
-
-    if (isCached) {
-      const cachedData = cache.get(cacheKey);
-      return res.status(200).json(cachedData);
-    }
-
-    //Find a reply given by its ID from the comments array and populate the owner field
+   //Find a reply given by its ID from the comments array and populate the owner field
     const reply = await Comment.findById(req.params.replyId).populate({
       path: "owner",
       select: "firstName"
@@ -206,8 +185,7 @@ exports.getReply = async (req, res) => {
     if (!reply) {
       return res.status(404).json({ message: "Reply not found" });
     }
-
-    cache.set(cacheKey, reply);
+    
     return res.status(200).json({ reply });
   } catch (error) {
     console.error(error);

@@ -1,97 +1,172 @@
+const jwt = require("jsonwebtoken");
+const passport = require("../passport");
 const User = require("../model/user");
-const passport = require("passport");
+//REMEMBER TO ADD THE SECURE TRUE PROPERTY TO THE COOKIE WHEN DEPLOYING
 
-exports.register = (req, res) => {
-  //const username = req.body.username
-  const password = req.body.password;
-  const user = req.body;
+exports.signup = async (req, res) => {
+  const { email, password } = req.body;
 
-  ///check if he uses small and capital letters
+  if (!email || !password) {
+    return res
+      .status(400)
+      .json({ message: "Username and password are required." });
+  }
 
-  //Register a new user using the local strategy
-  //Passportjs requires 3 objects, the first and second are the user details while the third is the callback function
-  //in the frontend validate their usename by changing the username to lower case before passing them to the database
-  User.register(new User(user), password, (err) => {
-    if (err) {
-      res.status(400).json({ err: err.message });
-    } else {
-      passport.authenticate("local")(req, res, () => {
-        res.setHeader("Content-Type", "application/json");
-        res
-          .status(200)
-          .json({ success: true, message: "Registration Successful", user });
-        // res.redirect("/login");
-      });
-    }
-  });
-};
+  try {
+    const user = await User.findOne({ email });
 
-exports.login = (req, res, next) => {
-  passport.authenticate("local", (err, user, info) => {
-    if (err) {
-      res.statusCode = 500;
-      res.json({ err: err.message });
-      return next(err);
-    }
-    if (!user) {
+    if (user) {
       return res
-        .status(200)
-        .json({ status: false, message: "Account does not exist" });
-      //res.redirect("/register")
-    }
-    req.login(user, (err) => {
-      if (err) {
-        return next(err);
-      }
-      res.json({ status: true, message: "Login successful", user });
-      //return res.redirect("/register");
-    });
-  })(req, res, next);
-};
-
-exports.logout = (req, res) => {
-  req.logOut((err) => {
-    if (err) {
-      res.status(500).json({ err: err });
+        .status(401)
+        .json({ message: "A user with the given email exists" });
     } else {
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "application/json");
-      res.json({ success: true, message: "Logout Successful" });
+      const user = await User.create({
+        email,
+        password,
+      });
+
+      const token = jwt.sign({ _id: user._id }, process.env.ACCESS_SECRET, {
+        expiresIn: "1h",
+      });
+      res.cookie("jwtToken", token, { httpOnly: true });
+
+      const refreshToken = jwt.sign(
+        { _id: user._id },
+        process.env.REFRESH_SECRET,
+        { expiresIn: "30d" }
+      );
+      res.cookie("refreshToken", refreshToken, { httpOnly: true });
+
+      return res
+        .status(201)
+        .json({ message: "User registered successfully!.", token });
     }
-  });
+  } catch (err) {
+    return res.status(500).json({ err: err.message });
+  }
 };
 
-exports.home = (req, res) => {
-  res.sendFile("/index.html");
-};
-exports.googleLogin = (req, res) => {
-  passport.authenticate("google", { scope: ["profile"] });
+exports.login = async (req, res) => {
+  try {
+    passport.authenticate("local", { session: false }, (err, user) => {
+      if (err) {
+        return res.status(401).json({ err: err.message });
+      }
+
+      if (!user) {
+        return res.status(401).json({ message: "Account does not exist" });
+      }
+
+      req.login(user, { session: false }, async (err) => {
+        if (err) return res.status(500).json({ message: "Login Failed" });
+
+        const token = jwt.sign({ _id: user._id }, process.env.ACCESS_SECRET, {
+          expiresIn: "1h",
+        });
+        res.cookie("jwtToken", token, { httpOnly: true });
+        //ADD THIS WHEN IN PRODUCTION
+        //res.cookie("jwtToken", token, { httpOnly: true, secure: true });
+
+        //VERIFY WHETHER YOU SHOULD GIVE A USER A NEW REFRESH TOKEN ON LOGIN///////////////////////
+        const refreshToken = jwt.sign(
+          { _id: user._id },
+          process.env.REFRESH_SECRET,
+          { expiresIn: "30d" }
+        );
+        res.cookie("refreshToken", refreshToken, { httpOnly: true });
+
+        return res.json({
+          message: "You are successfully logged in!",
+          token: token,
+        });
+      });
+    })(req, res);
+  } catch (err) {
+    return res.status(500).json({ err: err.message });
+  }
 };
 
-exports.googleLoginHome = (req, res) => {
-  passport.authenticate("google", {
-    successRedirect: "/auth/protected",
-    failureRedirect: "/login",
-  });
-  // function (req, res) {
-  //   //Successful authentication, redirect home.
-  //   res.send("google auth");
-  // };
+exports.protected = async (req, res) => {
+  console.log(req.user);
+  const user = await User.findById(req.user._id);
+  return res.json({ user, message: "Protected route" });
 };
 
-exports.googleLoginSuccess = (req, res) => {
-  let name = req.user.displayName;
-  res.send(`Hello ${name}`);
+exports.logout = async (req, res) => {
+  try {
+    res.clearCookie("jwtToken");
+    res.clearCookie("refreshToken");
+    res.status(200).json({ message: "Logout successful" });
+  } catch (err) {
+    res.status(500).json({ err: err.message });
+  }
 };
 
-exports.googleLoginFailure = (req, res) => {
-  res.send("something went wrong!");
+exports.refreshToken = async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(401).json({ message: "Refresh token not provided." });
+  }
+
+  try {
+    const decodedUser = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
+
+    // Check if the decoded token is valid and not expired
+    if (!decodedUser || decodedUser.exp * 1000 < Date.now()) {
+      return res
+        .status(401)
+        .json({ message: "Refresh token is invalid or expired." });
+    }
+
+    const newAccessToken = jwt.sign(
+      { _id: decodedUser._id },
+      process.env.ACCESS_SECRET,
+      { expiresIn: "1h" }
+    );
+    res.cookie("jwtToken", newAccessToken, { httpOnly: true });
+
+    return res.status(200).json({
+      message: "New access token generated successfully.",
+      token: newAccessToken,
+    });
+  } catch (err) {
+    return res.status(500).json({ err: err.message });
+  }
 };
 
+// exports.googleLogin = (req, res) => {
+//   passport.authenticate("google", { scope: ["profile"] });
+// };
+
+// exports.googleLoginHome = (req, res) => {
+//   passport.authenticate("google", {
+//     successRedirect: "/auth/protected",
+//     failureRedirect: "/login",
+//   });
+//   // function (req, res) {
+//   //   //Successful authentication, redirect home.
+//   //   res.send("google auth");
+//   // };
+// };
+
+// exports.googleLoginSuccess = (req, res) => {
+//   let name = req.user.displayName;
+//   res.send(`Hello ${name}`);
+// };
+
+// exports.googleLoginFailure = (req, res) => {
+//   res.send("something went wrong!");
+// };
+
+//////ALL USERS/////////////
 exports.getUsers = async (req, res) => {
   try {
     const users = await User.find();
-    res.json({ users });
+    if (!users) {
+      return res.status(404).json({ error: "No user found" });
+    }
+    res.status(200).json({ users });
   } catch (error) {
     res.status(500).json({ error: err.message });
   }
@@ -101,26 +176,41 @@ exports.deleteUsers = async (req, res) => {
   try {
     const user = await User.deleteMany();
     if (!user) {
-      return res.status(404).send("No user found");
+      return res.status(404).json({ error: "No user found" });
     }
-    res.send("Users deleted");
+    res.status(200).json({ message: "Users deleted" });
   } catch (error) {
     res.status(500).json({ error: err.message });
   }
 };
 
-/////////////////SPECIFIC USERS////////////////////////////////
+///////SPECIFIC USERS/////////////
 exports.getUser = async (req, res) => {
   try {
     //Find the user by its given ID
     const user = await User.findById(req.params.id);
     if (!user) {
-      return res.status(404).send();
+      return res.status(404).json({ error: "User does not exist" });
     }
-    res.send({ user });
+    res.status(200).json({ user });
   } catch (error) {
     res.status(500).json({ error: err.message });
   }
+};
+
+exports.editUser = async (req, res) => {
+  const userId = req.user._id;
+
+  const updatedUserData = req.body;
+
+  User.findByIdAndUpdate(userId, updatedUserData, { new: true })
+    .then((updatedUser) => {
+      console.log(updatedUser);
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+  return res.status(200).json({ message: "user updated successfully" });
 };
 
 exports.deleteUser = async (req, res) => {
@@ -128,47 +218,19 @@ exports.deleteUser = async (req, res) => {
     //Find and delete a user by its given ID
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) {
-      return res.status(404).send("user not found");
+      return res.status(404).json({ error: "user not found" });
     }
-    res.send("User deleted");
-  } catch (error) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-exports.editUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { firstName, lastName, username, level } = req.body;
-
-    // Find the user by ID
-    const user = await User.findById(id);
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Update the firstName and lastName fields
-    user.firstName = firstName;
-    user.lastName = lastName;
-    user.username = username;
-    user.level = level;
-
-    // Save the updated user
-    await user.save();
-
-    res.json({ message: "User details updated successfully" });
+    res.status(200).json({ message: "User deleted" });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
 
+///////SPECIFIC USERS PROFILE PICTURES//////////////
 exports.getProfile = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.user._id;
 
-    // Check if the user exists
     const user = await User.findById(id);
 
     if (!user) {
@@ -176,20 +238,18 @@ exports.getProfile = async (req, res) => {
     }
 
     // Return the user's avatar URL
-    res.json({ avatar: user.avatar });
+    res.status(200).json({ avatar: user.avatar });
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({
-        error: "An error occurred while retrieving the profile picture",
-      });
+    res.status(500).json({
+      error: "An error occurred while retrieving the profile picture",
+    });
   }
 };
 
 exports.postProfile = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.user._id;
 
     // Check if the user exists
     const user = await User.findById(id);
@@ -201,7 +261,7 @@ exports.postProfile = async (req, res) => {
     user.avatar = req.file.path;
     await user.save();
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: "Profile picture uploaded successfully",
     });
@@ -215,7 +275,7 @@ exports.postProfile = async (req, res) => {
 
 exports.deleteProfile = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.user._id;
 
     // Check if the user exists
     const user = await User.findById(id);
@@ -233,20 +293,33 @@ exports.deleteProfile = async (req, res) => {
     user.avatar = null;
     await user.save();
 
-    res.json({ success: true, message: "Profile picture deleted successfully" });
+    res
+      .status(200)
+      .json({ success: true, message: "Profile picture deleted successfully" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "An error occurred while deleting the profile picture" });
+    res
+      .status(500)
+      .json({ error: "An error occurred while deleting the profile picture" });
   }
-}
+};
 
-///////////////USER DISABILITY////////////////////////////////
+///////////USER ENABILITY AND DISABILITY//////////////////
 exports.enableUser = async (req, res) => {
   const { id } = req.params;
+  const currentUserId = req.user._id;
 
   try {
     // Find the user by ID
     const user = await User.findById(id);
+    const currentUser = await User.findById(currentUserId);
+
+    //check if the current user is a superuser
+    if (currentUser.role !== "superuser" && currentUser.role !== "admin") {
+      return res
+        .status(403)
+        .send("Only admins and super users can enable users");
+    }
 
     // Enable the user
     user.isActive = true;
@@ -262,10 +335,19 @@ exports.enableUser = async (req, res) => {
 
 exports.disableUser = async (req, res) => {
   const { id } = req.params;
+  const currentUserId = req.user._id;
 
   try {
     // Find the user by ID
     const user = await User.findById(id);
+    const currentUser = await User.findById(currentUserId);
+
+    //check if the current user is a superuser
+    if (currentUser.role !== "superuser" && currentUser.role !== "admin") {
+      return res
+        .status(403)
+        .send("Only admins and super users can disable users");
+    }
 
     // Disable the user
     user.isActive = false;
@@ -279,11 +361,13 @@ exports.disableUser = async (req, res) => {
   }
 };
 
-/////////SUPER USER LOG////////////
-exports.promoteUser = async (req, res, next) => {
+////////SUPER USER ROUTE//////////////
+exports.promoteUser = async (req, res) => {
   try {
-    const currentUser = req.user;
-    const targetUser = await User.findById(req.params.userId);
+    const currentUserId = req.user._id;
+
+    const targetUser = await User.findById(req.params.id);
+    const currentUser = await User.findById(currentUserId);
 
     //check if the current user is a superuser
     if (currentUser.role !== "superuser") {
@@ -295,7 +379,7 @@ exports.promoteUser = async (req, res, next) => {
 
     await targetUser.save();
 
-    res.send("User promoted successfully");
+    res.status(200).json({ message: "User promoted successfully" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -304,8 +388,10 @@ exports.promoteUser = async (req, res, next) => {
 
 exports.demoteUser = async (req, res, next) => {
   try {
-    const currentUser = req.user;
-    const targetUser = await User.findById(req.params.userId);
+    const currentUserId = req.user._id;
+
+    const targetUser = await User.findById(req.params.id);
+    const currentUser = await User.findById(currentUserId);
 
     //check if the current user is a superuser
     if (currentUser.role !== "superuser") {
@@ -317,9 +403,23 @@ exports.demoteUser = async (req, res, next) => {
 
     await targetUser.save();
 
-    res.send("User demoted successfully");
+    res.status(200).json({ message: "User demoted successfully" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
+  }
+};
+
+///////////////////OPTIONAL/////////////////////
+exports.deleteAccount = async (req, res) => {
+  try {
+    //Find and delete a user by its given ID
+    const user = await User.findByIdAndDelete(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "user not found" });
+    }
+    return res.status(200).json({ message: "User deleted" });
+  } catch (error) {
+    return res.status(500).json({ error: err.message });
   }
 };

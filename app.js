@@ -4,10 +4,9 @@ const bodyParser = require("body-parser");
 const path = require("path");
 const mongoose = require("mongoose");
 const logger = require("morgan");
-const session = require("express-session");
+const cookieParser = require("cookie-parser");
 const rateLimit = require('express-rate-limit');
 const passport = require("passport");
-require("./auth");
 const PORT = 3000;
 
 //save secret in env file
@@ -36,17 +35,8 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "client")));
-app.use(
-  session({
-    name: "session-id",
-    secret: process.env.SECRET,
-    resave: false,
-    saveUninitialized: false,
-    //cookie: {secure: false}
-  })
-);
 app.use(passport.initialize());
-app.use(passport.session());
+app.use(cookieParser());
 
 //ROUTES
 app.use("", userRouter);
@@ -63,8 +53,8 @@ app.all("*", (req, res) => {
 
 //CONNECTIONS
 mongoose.set("strictQuery", true);
-//const url = "mongodb://127.0.0.1:27017/eesaDB";
-const url = process.env.MONGO_CONNECT_URI
+const url = "mongodb://127.0.0.1:27017/eesaDB";
+//const url = process.env.MONGO_CONNECT_URI
 const connect = mongoose.connect(url, { useNewUrlParser: true, autoIndex: false,});
 connect
   .then(() => {

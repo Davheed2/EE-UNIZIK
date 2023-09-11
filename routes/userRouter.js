@@ -1,94 +1,88 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
 const userRouter = express.Router();
-const Controller = require("../controllers/userController");
-const uploadAvatar = require("../config/multerCloud");
-const passport = require("passport");
+const passport = require("../passport");
+const userController = require("../controllers/userController");
 
-const isAuthenticated = (req, res, next) => {
-  if (req.isAuthenticated()) {
-    return next();
-  } else {
-    return res.status(401).json({ message: "Not authenticated" });
-  }
-};
+const verifyUser = passport.authenticate("jwt", { session: false });
 
-const isAdmin = (req, res, next) => {
-  if (
-    (req.isAuthenticated() && req.user.role === "admin") ||
-    req.user.role === "superuser"
-  ) {
-    return next();
-  } else {
-    return res.status(403).json({ message: "Unauthorized" });
-  }
-};
+function checkTokenExpiry(req, res, next) {
+  const token = req.cookies.jwtToken;
 
-const isSuperUser = (req, res, next) => {
-  if (req.isAuthenticated() && req.user.role === "superuser") {
-    return next();
-  } else {
-    return res.status(403).json({ message: "Unauthorized" });
-  }
-};
-
-const checkActiveStatus = async (req, res, next) => {
-  const { user } = req;
-
-  // Check if the user is not active
-  if (user && !user.isActive) {
-    return res.status(403).json({ error: "User deactivated. Contact admin for more support" });
+  if (!token) {
+    return res
+      .status(403)
+      .json({ message: "Access denied. No token provided." });
   }
 
-  // If the user is active, proceed to the next middleware
-  next();
-};
+  jwt.verify(token, process.env.ACCESS_SECRET, async (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ message: "Token is invalid or expired." });
+    }
 
-//USER AUTHENTICATION
-userRouter.get("/users/logout", Controller.logout);
-userRouter.get("/", Controller.home);
+    req.user = decoded;
+    next();
+  });
+}
 
-userRouter.get("/auth/google", Controller.googleLogin);
-userRouter.get("/auth/google/callback", Controller.googleLoginHome);
-//userRouter.get("/auth/protected", isAuthenticated, Controller.googleLoginSuccess);
-//userRouter.get("/login", isAuthenticated, Controller.googleLoginFailure);
+function checkRefreshTokenExpiry(req, res, next) {
+  const token = req.cookies.refreshToken;
 
-userRouter.post("/users/register", Controller.register);
-userRouter.post("/users/login", checkActiveStatus, Controller.login);
+  if (!token) {
+    return res
+      .status(403)
+      .json({ message: "Access denied. No refresh token provided." });
+  }
 
+  jwt.verify(token, process.env.REFRESH_SECRET, async (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ message: "Refresh token is invalid or expired." });
+    }
 
+    req.user = decoded;
 
-//USER DETAILS
-userRouter.get("/users", Controller.getUsers);
-userRouter.get("/users/:id", isAuthenticated, isAdmin, Controller.getUser);
-userRouter.put("/users/:id", isAuthenticated, Controller.editUser);
-userRouter.delete("/users", isAuthenticated, isAdmin, Controller.deleteUsers);
-userRouter.delete("/users/:id", isAuthenticated, isAdmin, Controller.deleteUser);
+    next();
+  });
+}
 
-
-
-//USER PROFILE PICS
-userRouter.get("/users/:id/avatar", isAuthenticated, Controller.getProfile);
-userRouter.put("/users/:id/avatar", uploadAvatar.single("avatar"), isAuthenticated, Controller.postProfile);
-userRouter.delete("/users/:id/avatar", isAuthenticated, Controller.deleteProfile);
-
+//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2NGY1MTZlOTFhMmY1ZWZhMWZhNjI3NjgiLCJpYXQiOjE2OTQzNzIyMjEsImV4cCI6MTY5NDM3NTgyMX0.5ndlnEumb02s2i_AHPIj6sL9MgiqJBFlQ_W2Z-ugo8Y
 
 
-//USER PROMOTION
-userRouter.put(
-  "/users/:userId/promote",
-  isAuthenticated,
-  isSuperUser,
-  Controller.promoteUser
-);
-userRouter.put(
-  "/users/:userId/demote",
-  isAuthenticated,
-  isSuperUser,
-  Controller.demoteUser
-);
+userRouter.post("/signup", userController.signup);
+userRouter.post("/login", userController.login);
+userRouter.get("/logout", verifyUser, userController.logout)
+userRouter.get("/protected", verifyUser, checkTokenExpiry, userController.protected);
+userRouter.post("/refresh-token", checkRefreshTokenExpiry, userController.refreshToken);
 
-//USER ENABILITY
-userRouter.put("/users/:id/disable", isAuthenticated, Controller.disableUser);
-userRouter.put("/users/:id/enable", isAuthenticated, Controller.enableUser);
+
+//ALL USER DETAILS
+userRouter.get("/users", verifyUser, checkTokenExpiry, userController.getUsers);
+userRouter.delete("/users", verifyUser, checkTokenExpiry, userController.deleteUsers);
+
+//SPECIFIC USER DETAILS
+userRouter.get("/user/:id", verifyUser, checkTokenExpiry, userController.getUser);
+userRouter.put("/user", verifyUser, checkTokenExpiry, userController.editUser);
+userRouter.delete("/user/:id", verifyUser, checkTokenExpiry, userController.deleteUser);
+//verifyUser, checkTokenExpiry, 
+
+
+////SPECIFIC USER PROFILES PICTURES//////////
+userRouter.get("/users/avatar", verifyUser, checkTokenExpiry, userController.getProfile);
+//userRouter.put("/users/avatar", uploadAvatar.single("avatar"), verifyUser, checkTokenExpiry, userController.postProfile);
+userRouter.delete("/users/avatar", verifyUser, checkTokenExpiry, userController.deleteProfile);
+
+
+///////////USER ENABILITY AND DISABILITY//////////////////
+userRouter.put("/users/:id/enable", verifyUser, checkTokenExpiry, userController.enableUser);
+userRouter.put("/users/:id/disable", verifyUser, checkTokenExpiry, userController.disableUser);
+
+
+////////SUPER USER ROUTE//////////////
+userRouter.put("/users/:id/promote", verifyUser, checkTokenExpiry, userController.promoteUser);
+userRouter.put("/users/:id/demote", verifyUser, checkTokenExpiry, userController.demoteUser);
+
+/////////////OPTIONAL///////////////////
+userRouter.delete("/profile", verifyUser, checkTokenExpiry, userController.deleteAccount);
 
 module.exports = userRouter;
+

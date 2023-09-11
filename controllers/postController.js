@@ -7,22 +7,11 @@ const cache = new NodeCache({ stdTTL: 60 * 5 });
 //GET ALL POSTS WITH ITS COMMENTS
 exports.getPost = async (req, res) => {
   try {
-    // Check if the data is already cached
-    const cacheKey = "postss";
-    const isCached = cache.has(cacheKey);
-    console.log(isCached);
-
-    if (isCached) {
-      const cachedData = cache.get(cacheKey);
-      return res.status(200).json(cachedData);
-    }
-
     //Get all posts and populate it with the comments and not replies
     const posts = await Post.find().populate({
       path: "comments"
     });
 
-    cache.set(cacheKey, posts);
     return res.json({ posts });
   } catch (error) {
     console.error(error);
