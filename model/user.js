@@ -66,7 +66,7 @@ const UserSchema = new Schema(
   }
 );
 
-//Hash the password before saving it
+//Hash the password before saving it to the database in the await user.save() func
 UserSchema.pre("save", async function (next) {
   const user = this;
 

@@ -1,8 +1,53 @@
 const express = require("express");
 const resetRouter = express.Router();
-const resetController = require("../controllers/resetPasswordController");
+const jwt = require("jsonwebtoken");
+const passport = require("../passport");
+const resetPasswordController = require("../controllers/resetPasswordController");
 
-const checkActiveStatus = async (req, res, next) => {
+const verifyUser = passport.authenticate("jwt", { session: false });
+
+function checkTokenExpiry(req, res, next) {
+  const token = req.cookies.jwtToken;
+
+  if (!token) {
+    return res
+      .status(403)
+      .json({ message: "Access denied. No token provided." });
+  }
+
+  jwt.verify(token, process.env.ACCESS_SECRET, async (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ message: "Token is invalid or expired." });
+    }
+
+    req.user = decoded;
+    next();
+  });
+}
+
+function checkRefreshTokenExpiry(req, res, next) {
+  const token = req.cookies.refreshToken;
+
+  if (!token) {
+    return res
+      .status(403)
+      .json({ message: "Access denied. No refresh token provided." });
+  }
+
+  jwt.verify(token, process.env.REFRESH_SECRET, async (err, decoded) => {
+    if (err) {
+      return res
+        .status(401)
+        .json({ message: "Refresh token is invalid or expired." });
+    }
+
+    req.user = decoded;
+
+    next();
+  });
+}
+
+function checkActiveStatus(req, res, next) {
   const { user } = req;
 
   // Check if the user is not active
@@ -14,9 +59,15 @@ const checkActiveStatus = async (req, res, next) => {
   next();
 };
 
-resetRouter.get("/reset-password", resetController.getReset);
-resetRouter.post("/reset-password", resetController.postReset);
-resetRouter.get("/reset-password/:token", resetController.getResetToken);
-resetRouter.post("/reset-password/:token", resetController.postResetToken);
+// Route to request a password reset
+resetRouter.post("/reset-password-request", resetPasswordController.requestPasswordReset);
+
+// Route to render the password reset form
+resetRouter.get("/reset-password/:token", resetPasswordController.renderPasswordResetForm);
+
+// Route to handle password reset form submission
+resetRouter.post("/reset-password/:token", resetPasswordController.resetPassword);
+
+
 
 module.exports = resetRouter;

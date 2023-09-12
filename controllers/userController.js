@@ -4,7 +4,7 @@ const User = require("../model/user");
 //REMEMBER TO ADD THE SECURE TRUE PROPERTY TO THE COOKIE WHEN DEPLOYING
 
 exports.signup = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, firstName, lastName, level, department } = req.body;
 
   if (!email || !password) {
     return res
@@ -23,6 +23,10 @@ exports.signup = async (req, res) => {
       const user = await User.create({
         email,
         password,
+        firstName,
+        lastName,
+        level,
+        department,
       });
 
       const token = jwt.sign({ _id: user._id }, process.env.ACCESS_SECRET, {
@@ -54,7 +58,7 @@ exports.login = async (req, res) => {
       }
 
       if (!user) {
-        return res.status(401).json({ message: "Account does not exist" });
+        return res.status(401).json({ message: "Incorrect Email or Password" });
       }
 
       req.login(user, { session: false }, async (err) => {
