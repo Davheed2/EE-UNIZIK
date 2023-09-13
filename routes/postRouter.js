@@ -1,63 +1,39 @@
 const express = require("express");
 const postRouter = express.Router();
+const jwt = require("jsonwebtoken");
 const postController = require("../controllers/postController");
+const passport = require("../passport");
 
-const isAuthenticated = (req, res, next) => {
-  if (req.isAuthenticated()) {
-    return next();
-  } else {
-    return res.status(401).json({ message: "Not authenticated" });
-  }
-};
+const verifyUser = passport.authenticate("jwt", { session: false });
 
-const isAdmin = (req, res, next) => {
-  if ((req.isAuthenticated() && req.user.role.includes("admin")) || req.user.role.includes("superuser")) {
-    return next();
-  } else {
-    return res.status(403).json({ message: "Unauthorized" });
-  }
-};
+function checkTokenExpiry(req, res, next) {
+  const token = req.cookies.jwtToken;
 
-const checkActiveStatus = async (req, res, next) => {
-  const { user } = req;
-
-  // Check if the user is not active
-  if (user && !user.isActive) {
-    return res.status(403).json({ error: "User deactivated. Contact admin for more support" });
+  if (!token) {
+    return res
+      .status(403)
+      .json({ message: "Access denied. No token provided." });
   }
 
-  // If the user is active, proceed to the next middleware
-  next();
-};
+  jwt.verify(token, process.env.ACCESS_SECRET, async (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ message: "Token is invalid or expired." });
+    }
 
-//POST ROUTES
-postRouter.get("/posts", postController.getPost);
-postRouter.post("/posts", isAuthenticated, isAdmin, postController.createPost);
-postRouter.put("/posts", isAuthenticated, isAdmin, postController.putPost);
-postRouter.delete(
-  "/posts",
-  isAuthenticated,
-  isAdmin,
-  postController.deleteAllPost
-);
+    req.user = decoded;
+    next();
+  });
+}
+
+
+postRouter.get("/posts", postController.getPosts);
+postRouter.post("/posts", verifyUser, checkTokenExpiry, postController.createPost);
+postRouter.put("/posts", verifyUser, checkTokenExpiry, postController.putAllPosts);
+postRouter.delete("/posts", verifyUser, checkTokenExpiry, postController.deleteAllPost);
+
 postRouter.get("/posts/:postId", postController.getSpecificPost);
-postRouter.post(
-  "/posts/:postId",
-  isAuthenticated,
-  isAdmin,
-  postController.postSpecificPost
-);
-postRouter.patch(
-  "/posts/:postId",
-  isAuthenticated,
-  isAdmin,
-  postController.patchSpecificPost
-);
-postRouter.delete(
-  "/posts/:postId",
-  isAuthenticated,
-  isAdmin,
-  postController.deleteSpecificPost
-);
+postRouter.post("/posts/:postId", verifyUser, checkTokenExpiry, postController.postSpecificPost);
+postRouter.patch("/posts/:postId", verifyUser, checkTokenExpiry, postController.patchSpecificPost);
+postRouter.delete("/posts/:postId", verifyUser, checkTokenExpiry, postController.deleteSpecificPost);
 
 module.exports = postRouter;

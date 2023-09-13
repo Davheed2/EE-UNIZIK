@@ -17,7 +17,7 @@ const postRouter = require("./routes/postRouter");
 const commentRouter = require("./routes/commentRouter");
 const fileUploadRouter = require("./routes/fileUploadRouter");
 const gradePointRouter = require("./routes/gradePointRouter");
-const resetRoutes = require("./routes/resetPasswordRouter");
+const resetRouter = require("./routes/resetPasswordRouter");
 
 const app = express();
 
@@ -44,7 +44,7 @@ app.use("", postRouter);
 app.use("/posts", commentRouter);
 app.use("", fileUploadRouter);
 app.use("", gradePointRouter);
-app.use("", resetRoutes);
+app.use("", resetRouter);
 
 //Unhandled routes
 app.all("*", (req, res) => {
