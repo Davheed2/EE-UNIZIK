@@ -1,98 +1,44 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
 const commentRouter = express.Router();
 const commentController = require("../controllers/commentController");
+const passport = require("../passport");
 
-const isAuthenticated = (req, res, next) => {
-  if (req.isAuthenticated()) {
-    return next();
-  } else {
-    return res.status(401).json({ message: "Not authenticated" });
-  }
-};
+const verifyUser = passport.authenticate("jwt", { session: false });
 
-const isAdmin = (req, res, next) => {
-  if (
-    (req.isAuthenticated() && req.user.role.includes("admin")) ||
-    req.user.role.includes("superuser")
-  ) {
-    return next();
-  } else {
-    return res.status(403).json({ message: "Unauthorized" });
-  }
-};
+function checkTokenExpiry(req, res, next) {
+  const token = req.cookies.jwtToken;
 
-const checkActiveStatus = async (req, res, next) => {
-  const { user } = req;
-
-  // Check if the user is not active
-  if (user && !user.isActive) {
-    return res.status(403).json({ error: "User deactivated. Contact admin for more support" });
+  if (!token) {
+    return res
+      .status(403)
+      .json({ message: "Access denied. No token provided." });
   }
 
-  // If the user is active, proceed to the next middleware
-  next();
-};
+  jwt.verify(token, process.env.ACCESS_SECRET, async (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ message: "Token is invalid or expired." });
+    }
+
+    req.user = decoded;
+    next();
+  });
+}
 
 //COMMENTS ROUTES
-commentRouter.get(
-  "/:postId/comments",
-  isAuthenticated,
-  commentController.getAllComments
-);
-commentRouter.post(
-  "/:postId/comments",
-  isAuthenticated,
-  commentController.postComment
-);
+commentRouter.get("/:postId/comments", commentController.getAllComments);
+commentRouter.post("/:postId/comments", verifyUser, checkTokenExpiry, commentController.postComment);
+commentRouter.delete("/:postId/comments",verifyUser, checkTokenExpiry, commentController.deleteComments);
+commentRouter.delete("/:postId/comments/:commentId",verifyUser, checkTokenExpiry, commentController.deleteAcomment);
 
-commentRouter.delete(
-  "/:postId/comments",
-  isAuthenticated,
-  isAdmin,
-  commentController.deleteComments
-);
-commentRouter.delete(
-  "/:postId/comments/:commentId",
-  isAuthenticated,
-  isAdmin,
-  commentController.deleteAcomment
-);
+//SUB-COMMENTS ROUTES
+commentRouter.get("/:postId/comments/:commentId/replies", commentController.getAllReplies);
+commentRouter.post("/:postId/comments/:commentId/replies", verifyUser, checkTokenExpiry, commentController.postReply);
+commentRouter.get("/:postId/comments/:commentId/replies/:replyId", commentController.getReply);
+//commentRouter.post("/:postId/comments/:commentId/replies/:replyId", verifyUser, checkTokenExpiry, commentController.postSubReply);
 
-commentRouter.get(
-  "/:postId/comments/:commentId/replies",
-  isAuthenticated,
-  commentController.getAllReplies
-);
-commentRouter.get(
-  "/:postId/comments/:commentId/replies/:replyId",
-  isAuthenticated,
-  commentController.getReply
-);
-commentRouter.post(
-  "/:postId/comments/:commentId/replies",
-  isAuthenticated,
-  commentController.postReply
-);
-// commentRouter.post(
-//   "/:postId/comments/:commentId/replies/:replyId",
-//   isAuthenticated,
-//   commentController.postSubReply
-// );
-commentRouter.patch(
-  "/:postId/comments/:commentId/replies",
-  isAuthenticated,
-  commentController.patchSpecificReply
-);
-commentRouter.delete(
-  "/:postId/comments/:commentId/replies",
-  isAuthenticated,
-  isAdmin,
-  commentController.deleteAllReplies
-);
-commentRouter.delete(
-  "/:postId/comments/:commentId/replies/:replyId",
-  isAuthenticated,
-  commentController.deleteReply
-);
+commentRouter.patch("/:postId/comments/:commentId/replies", verifyUser, checkTokenExpiry, commentController.patchSpecificReply);
+commentRouter.delete("/:postId/comments/:commentId/replies", verifyUser, checkTokenExpiry, commentController.deleteAllReplies);
+commentRouter.delete("/:postId/comments/:commentId/replies/:replyId", verifyUser, checkTokenExpiry, commentController.deleteReply);
 
 module.exports = commentRouter;

@@ -1,8 +1,6 @@
 const Post = require("../model/post");
 const User = require("../model/user");
 const Comment = require("../model/comment");
-const NodeCache = require( "node-cache" );
-const cache = new NodeCache({ stdTTL: 60 * 5 });
 
 //GET ALL POSTS WITH ITS COMMENTS
 exports.getPosts = async (req, res) => {
@@ -98,15 +96,6 @@ exports.deleteAllPost = async (req, res) => {
 exports.getSpecificPost = async (req, res) => {
   const { postId } = req.params;
   try {
-    // Check if the data is already cached
-    const cacheKey = "posts";
-    const isCached = cache.has(cacheKey);
-
-    if (isCached) {
-      const cachedData = cache.get(cacheKey);
-      return res.status(200).json(cachedData);
-    }
-
     //Find the specific post with the given ID from the params then populate the comment and the owner fields
     const post = await Post.find({ slug: postId })
       .populate({
@@ -120,7 +109,6 @@ exports.getSpecificPost = async (req, res) => {
       return res.status(404).json({ error: "Post not found" });
     }
 
-    cache.set(cacheKey, post);
     return res.status(200).json({ post });
   } catch (err) {
     return res.status(500).json({ error: err.message });
