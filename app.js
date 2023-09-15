@@ -53,8 +53,8 @@ app.all("*", (req, res) => {
 
 //CONNECTIONS
 mongoose.set("strictQuery", true);
-const url = "mongodb://127.0.0.1:27017/eesaDB";
-//const url = process.env.MONGO_CONNECT_URI
+//const url = "mongodb://127.0.0.1:27017/eesaDB";
+const url = process.env.MONGO_CONNECT_URI
 const connect = mongoose.connect(url, { useNewUrlParser: true, autoIndex: false,});
 connect
   .then(() => {

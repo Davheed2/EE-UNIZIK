@@ -364,43 +364,39 @@ exports.deleteAllReplies = async (req, res) => {
   }
 };
 
-// DELETE A REPLY UNDER A COMMENT UNDER A POST
+
+// DELETE A REPLY MADE BY THE USER
 exports.deleteReply = async (req, res) => {
   const currentUserId = req.user._id;
+  const commentId = req.params.commentId;
+  const replyId = req.params.replyId;
+
   try {
-    // Find the comment by its given ID and postId
-    const comment = await Comment.findOne({
-      _id: req.params.commentId,
-      postId: req.params.postId,
-    });
+    // Use findByIdAndUpdate to delete the reply
+    const updatedComment = await Comment.findByIdAndUpdate(
+      commentId,
+      {
+        $pull: { replies: replyId }, // Remove the reply from the 'replies' array
+      },
+      { new: true } // Return the updated comment
+    );
 
-    // Check if the comment exists
-    if (!comment) {
-      return res.status(404).json({ error: "Comment not found." });
+    if (!updatedComment) {
+      return res.status(404).json({ error: 'Comment not found.' });
     }
 
-    // Find the reply within the comment by its ID
-    const reply = comment.replies.find((r) => r.equals(req.params.replyId));
+    // Check if the reply was deleted from the comment's replies array
+    const replyIndex = updatedComment.replies.findIndex((reply) =>
+      reply._id.equals(replyId)
+    );
 
-    // Check if the reply exists
-    if (!reply) {
-      return res.status(404).json({ error: "Reply not found." });
+    if (replyIndex === -1) {
+      return res.status(200).json({ message: 'Reply deleted successfully' });
+    } else {
+      return res.status(403).json({
+        error: "You can only delete your own replies.",
+      });
     }
-
-    // Check if the reply belongs to the current user
-    if (!reply.owner.equals(currentUserId)) {
-      return res
-        .status(403)
-        .json({ error: "You can only delete your own replies." });
-    }
-
-    // Remove the reply from the comment's replies array
-    comment.replies.pull(reply);
-
-    // Save the updated comment
-    await comment.save();
-
-    return res.status(200).json({ message: "Reply deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

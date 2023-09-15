@@ -39,6 +39,6 @@ commentRouter.get("/:postId/comments/:commentId/replies/:replyId", commentContro
 
 commentRouter.patch("/:postId/comments/:commentId/replies", verifyUser, checkTokenExpiry, commentController.patchSpecificReply);
 commentRouter.delete("/:postId/comments/:commentId/replies", verifyUser, checkTokenExpiry, commentController.deleteAllReplies);
-commentRouter.delete("/:postId/comments/:commentId/replies/:replyId", verifyUser, checkTokenExpiry, commentController.deleteReply);
+//commentRouter.delete("/:postId/comments/:commentId/replies/:replyId", verifyUser, checkTokenExpiry, commentController.deleteReply);
 
 module.exports = commentRouter;
