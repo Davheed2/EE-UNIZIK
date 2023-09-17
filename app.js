@@ -7,9 +7,11 @@ const logger = require("morgan");
 const cookieParser = require("cookie-parser");
 const rateLimit = require('express-rate-limit');
 const passport = require("passport");
+const cors = require("cors");
 const PORT = 3000;
 
-//save secret in env file
+
+
 
 //ROUTES
 const userRouter = require("./routes/userRouter");
@@ -37,6 +39,10 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "client")));
 app.use(passport.initialize());
 app.use(cookieParser());
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true,
+}));
 
 //ROUTES
 app.use("", userRouter);
@@ -53,8 +59,8 @@ app.all("*", (req, res) => {
 
 //CONNECTIONS
 mongoose.set("strictQuery", true);
-//const url = "mongodb://127.0.0.1:27017/eesaDB";
-const url = process.env.MONGO_CONNECT_URI
+const url = "mongodb://127.0.0.1:27017/eesaDB";
+//const url = process.env.MONGO_CONNECT_URI
 const connect = mongoose.connect(url, { useNewUrlParser: true, autoIndex: false,});
 connect
   .then(() => {

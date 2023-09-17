@@ -6,10 +6,8 @@ const User = require("../model/user");
 exports.signup = async (req, res) => {
   const { email, password, firstName, lastName, level, department } = req.body;
 
-  if (!email || !password) {
-    return res
-      .status(400)
-      .json({ message: "Username and password are required." });
+  if (!email || !password || !firstName || !lastName || !level) {
+    return res.status(400).json({ message: "Fill in the required fields." });
   }
 
   try {
@@ -68,7 +66,7 @@ exports.login = async (req, res) => {
           expiresIn: "1h",
         });
         res.cookie("jwtToken", token, { httpOnly: true });
-        //ADD THIS WHEN IN PRODUCTION
+        //ADD THIS WHEN IN PRODUCTION and also add the maxAge property
         //res.cookie("jwtToken", token, { httpOnly: true, secure: true });
 
         //VERIFY WHETHER YOU SHOULD GIVE A USER A NEW REFRESH TOKEN ON LOGIN///////////////////////
@@ -98,8 +96,8 @@ exports.protected = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    res.clearCookie("jwtToken");
-    res.clearCookie("refreshToken");
+    res.clearCookie("jwtToken", { httpOnly: true });
+    res.clearCookie("refreshToken", { httpOnly: true });
     res.status(200).json({ message: "Logout successful" });
   } catch (err) {
     res.status(500).json({ err: err.message });
