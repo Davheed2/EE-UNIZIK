@@ -5,13 +5,10 @@ const path = require("path");
 const mongoose = require("mongoose");
 const logger = require("morgan");
 const cookieParser = require("cookie-parser");
-const rateLimit = require('express-rate-limit');
+const rateLimit = require("express-rate-limit");
 const passport = require("passport");
 const cors = require("cors");
 const PORT = 3000;
-
-
-
 
 //ROUTES
 const userRouter = require("./routes/userRouter");
@@ -24,11 +21,11 @@ const resetRouter = require("./routes/resetPasswordRouter");
 const app = express();
 
 const limiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutes
-	max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
-	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-})
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
 //INITIALIZE
 app.use(logger("dev"));
@@ -39,10 +36,12 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "client")));
 app.use(passport.initialize());
 app.use(cookieParser());
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
 //ROUTES
 app.use("", userRouter);
@@ -54,14 +53,17 @@ app.use("", resetRouter);
 
 //Unhandled routes
 app.all("*", (req, res) => {
-  res.status(404).send("Sorry, the requested route was not found");
+  res.status(404).json({ message: "Sorry, the requested route was not found" });
 });
 
 //CONNECTIONS
 mongoose.set("strictQuery", true);
 const url = "mongodb://127.0.0.1:27017/eesaDB";
 //const url = process.env.MONGO_CONNECT_URI
-const connect = mongoose.connect(url, { useNewUrlParser: true, autoIndex: false,});
+const connect = mongoose.connect(url, {
+  useNewUrlParser: true,
+  autoIndex: false,
+});
 connect
   .then(() => {
     console.log("connected to db succesfully");

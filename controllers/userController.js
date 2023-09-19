@@ -51,12 +51,13 @@ exports.signup = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     passport.authenticate("local", { session: false }, (err, user) => {
+      const role = user.role;
       if (err) {
         return res.status(401).json({ err: err.message });
       }
 
       if (!user) {
-        return res.status(401).json({ message: "Incorrect Email or Password" });
+        return res.status(400).json({ message: "Incorrect Email or Password" });
       }
 
       req.login(user, { session: false }, async (err) => {
@@ -80,6 +81,7 @@ exports.login = async (req, res) => {
         return res.json({
           message: "You are successfully logged in!",
           token: token,
+          role,
         });
       });
     })(req, res);
